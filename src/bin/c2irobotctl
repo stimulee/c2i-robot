@@ -1,0 +1,190 @@
+#!/bin/bash
+
+# chkconfig: 345 64 36
+# description: c2i robot utility
+#
+# processname: c2irobot
+# pidfile: /var/run/c2irobot.pid
+
+###############################################################################
+#                     A d m i n i s t r a t i o n  S c r i p t
+#
+# Usage :
+#          ./<SCRIPT> [start|stop|restart|status|health]
+#
+#
+# Requirements :
+#
+#
+###############################################################################
+# BEGIN OF CONFIG_SECTION
+
+# Script informations
+SCRIPT="$(basename $0)"
+
+PROG_NAME="C2i Robot"
+PROG_PATH=$(cd `dirname $0`; pwd)
+
+cd $PROG_PATH
+
+# If not existing export, set default install value
+if [ "x$RUN_PATH" = "x" ]; then
+    export RUN_PATH="/var/run/"
+fi
+if [ "x$CONF_DIR" = "x" ]; then
+    export CONF_DIR="../conf"
+fi
+if [ "x$LOG_DIR" = "x" ]; then
+    export LOG_DIR="../log"
+fi
+if [ "x$CONFIG_FILE" = "x" ]; then
+    export CONFIG_FILE="c2irobot.conf"
+fi
+if [ ! -d $PROG_PATH ]; then
+    export PROG_PATH='.'
+fi
+
+# File for saving PID of cassandra
+PIDFILE=$RUN_PATH/c2irobot.pid
+
+# END OF CONFIG_SECTION
+#################################################################################
+
+get_pid()
+{
+    PID=`cat $PIDFILE`
+    echo "$PID"
+}
+
+# Stop the daemon
+stop_daemon()
+{
+    if [ -f $PIDFILE ] ; then
+        PID=$(get_pid)
+        TMP=`ps -eo pid | grep -w $PID`
+        TIMER=0
+
+        if [ ! -z "$TMP" ]; then
+            kill 1 $PID > /dev/null 2>&1
+            CMD_RESULT=$?
+        fi
+        while [ ! -z "$TMP" -a $TIMER -lt 60 ]; do
+            sleep 5
+            TMP=`ps -eo pid | grep -w $PID`
+            TIMER=$(expr $TIMER + 5)
+        done
+        if [ -z "$TMP" ]; then
+            echo -e "$PROG_NAME is \e[1;31mstopped\e[0m"
+            rm -f $PIDFILE
+        else
+            echo -e "\e[1;31mfailed\e[0m to stop $PROG_NAME"
+            exit $CMD_RESULT
+        fi
+    else
+        echo -e "$PROG_NAME is \e[1;31mstopped\e[0m"
+    fi
+}
+
+# Start as a daemon
+start_daemon()
+{
+    if [ -f $PIDFILE ] ; then
+        PID=$(get_pid)
+        TMP=`ps -eo pid | grep -w $PID`
+
+        if [ -z "$TMP" ]; then
+            rm $PIDFILE
+        else
+            echo -e "$PROG_NAME is already \e[1;32mrunning\e[0m."
+            return 0
+        fi
+    fi
+
+    # Start
+    cd $PROG_PATH
+    nohup ./c2irobot.py $CONF_DIR/$CONFIG_FILE >> $LOG_DIR/c2irobot.out 2>&1 &
+    CMD_RESULT=$?
+    sleep 2
+    if [ "$CMD_RESULT" -eq 0 ]; then
+        PID=$(ps ax | grep -i 'c2irobot.py' | grep "python" | grep -v grep | awk '{print $1}')
+        if [ ! -z "$PID" ]; then
+            echo $PID > $PIDFILE
+            chmod 644 $PIDFILE
+            echo -e "$PROG_NAME is \e[1;32mrunning\e[0m."
+        else
+            echo -e "$PROG_NAME \e[1;31mfailed\e[0m to start"
+            exit 100
+        fi
+    else
+        echo -e "$PROG_NAME \e[1;31mfailed\e[0m to start"
+        exit $CMD_RESULT
+    fi
+
+}
+
+# C2i Robot status
+status()
+{
+    if [ -f $PIDFILE ] ; then
+        PID=$(get_pid)
+        TMP=`ps -eo pid | grep -w $PID`
+
+        if [ -z "$TMP" ]; then
+            echo -e "$PROG_NAME is \e[1;31mstopped\e[0m, but PID file already exists."
+            return 1
+        else
+            echo -e "$PROG_NAME is \e[1;32mrunning\e[0m."
+            return 0
+        fi
+    else
+        PID=$(ps ax | grep -i 'c2irobot.py' | grep "python" | grep -v grep | awk '{print $1}')
+        if [ ! -z $PID ]; then
+          echo -e "$PROG_NAME is \e[1;32mrunning\e[0m, but PID file is missing."
+          return 1
+        else
+          echo -e "$PROG_NAME is \e[1;31mstopped\e[0m."
+        fi
+    fi
+}
+
+# C2i Robot health check
+health_check()
+{
+    # TODO
+    echo ""
+}
+
+#Main
+case "$1" in
+        'start')
+                echo "Starting $PROG_NAME ..."
+                start_daemon
+                ;;
+        'stop')
+                echo "Shutting down $PROG_NAME ..."
+                stop_daemon
+                ;;
+        'restart')
+                echo "Restarting $PROG_NAME ..."
+                stop_daemon
+                sleep 10
+                start_daemon
+                ;;
+        'status')
+                status
+                ;;
+        'health')
+                health_check
+                ;;
+        *)
+                echo -e "Usage: $SCRIPT <command> <arguments>\n"
+                echo -e "Command description: "
+                echo -e "  start\t\t: Start $PROG_NAME"
+                echo -e "  stop\t\t: Stop $PROG_NAME"
+                echo -e "  restart\t: Restart $PROG_NAME"
+                echo -e "  status\t\t: Display a global $PROG_NAME status"
+                echo -e "  health\t\t: Health check of $PROG_NAME"
+                exit 1
+                ;;
+esac
+exit 0

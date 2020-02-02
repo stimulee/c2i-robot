@@ -1,0 +1,15 @@
+[Unit]
+Description=C2I Robot service
+
+[Service]
+Type=simple
+ExecStart=/opt/c2i/robot/bin/c2irobotctl start
+ExecStop=/opt/c2i/robot/bin/c2irobotctl stop
+
+PIDFile=/var/run/c2irobot.pid
+
+RestartSec=120
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

@@ -4,7 +4,9 @@ Il s'agit du projet de bras robotisé de l'association C-2i. Le code disponible 
 
 Le projet utilise un Raspberry PI pour piloter l'ensemble en envoyant les instructions à un Arduino. L'Arduino fait tourner grbl, un interpréteur de g-code, qui pilote les moteurs pas à pas du bras et le servomoteur de la pince. Afin de piloter la pince, il faut utiliser une version spécifique de grbl : grbl-servo (https://github.com/stimulee/grbl-servo).
 
-Pour l'écriture sur l'écran lcd, nous utilisons cette librairie : https://github.com/stimulee/i2c_lcd
+Pour l'écriture sur l'écran lcd, nous utilisons cette librairie : https://github.com/stimulee/i2c_lcd.
+Pour logger les messages dans les fichiers de log, on utilise log4p : https://pypi.org/project/log4p/
+
 
 ## Structure du projet
 
@@ -29,6 +31,10 @@ Pour l'écriture sur l'écran lcd, nous utilisons cette librairie : https://gith
 
 
 ## Installation
+
+Cablage ;
+- Brancher un bouton poussoir sur les pins 37 (GPIO 26)  et 39 (Ground).
+- Brancher l'écran LCD sur les pins 2 (5V), 3 (GPIO2 -> SDA), 5 (GPIO3 -> SCL) et 6 (Ground).
 
       mkdir /opt/c2i/
 

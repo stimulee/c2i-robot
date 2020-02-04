@@ -5,6 +5,9 @@ if [ $(id -u) -ne 0 ]; then
   exit 1
 fi
 
+echo 'INSTALL ; installation des packages python requis'
+pip install log4p
+
 echo 'INSTALL : creation du lien symbolique de la version "/opt/c2i/robot"'
 if [ -h /opt/c2i/robot ]; then
   rm /opt/c2i/robot
@@ -42,10 +45,19 @@ if [ $RC -ne 0 ]; then
   exit 50
 fi
 
-echo 'INSTALL : demarrage du service'
-systemctl start c2irobot.service
-RC=$?
-if [ $RC -ne 0 ]; then
-  echo "Error on service c2irobot startup! [$RC]"
-  exit 60
+# Confiugration pour bouton d'arrêt
+if [ $(grep -c "/opt/c2i/robot/bin/off_button.py" /etc/rc.local) -eq 0 ]; then
+  echo 'INSTALL : rc.local update'
+  sed -i "s|exit 0|if [ -f /opt/c2i/robot/bin/off_button.py ]; then \n\
+  python /opt/c2i/robot/bin/off_button.py \n\
+fi \n\
+\n\
+exit 0|" /etc/rc.local
+  RC=$?
+  if [ $RC -ne 0 ]; then
+    echo "Error on rc.local update for shutdown button configuration! [$RC]"
+    exit 70
+  fi
 fi
+
+echo 'INSTALL : installation terminée, vous pouvez démarrer le service manuellement ou redémarrer.'

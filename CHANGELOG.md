@@ -1,3 +1,10 @@
+# v1.0.2
+
+- Correction du g-code
+- Ajout documentation
+- Ajout des modèles 3D des pièces
+- Corrections README et CHANGELOG
+
 # V1.0.1
 
 - Ajout de logger (log4p)
@@ -8,6 +15,6 @@
 - Ajout du CHANGELOG.md
 - Ajout des schémas de cablage
 
-# V1.O.O
+# V1.0.0
 
-Version initiale
+- Version initiale

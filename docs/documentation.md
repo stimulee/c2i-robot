@@ -242,6 +242,12 @@ Enfin, la création de message se fait comme suit :
     log.debug('flag de fin de boucle : ' + str(ending))
     log.error("Arm is not connected to USB port!")
 
+## G-code
+
+C'est le langage utilisé pour commander les différents moteur du bras. 
+https://en.wikipedia.org/wiki/G-code
+
+
 ## Test
 
 Si on ne dispose pas de d'Arduino avec "grbl" installé, il est possible d'utiliser un simulateur grbl et de créer un device factice qui sera utilisé pour parler au simulateur.

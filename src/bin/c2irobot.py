@@ -130,9 +130,11 @@ if __name__ == '__main__':
             l = line_loop.strip() # Strip all EOL characters for consistency
             log.debug('Sending: ' + l)
             s.write(l + '\n') # Send g-code block to grbl
-            # BDT : bug les commandes ci-dessous font planter l'arret du service par envoi de SIGTERM
-            #grbl_out = s.readline() # Wait for grbl response with carriage return
-            #log.debug('Return information : ' + grbl_out.strip())
+            # BDT : bug la commande s.read plante lorsque le programme recoit un SIGTERM
+            #       le port serie est occupe. On contourne le pb en faisant une pause.
+            time.sleep(2)
+            grbl_out = s.readline() # Wait for grbl response with carriage return
+            log.debug('Return information : ' + grbl_out.strip())
 
         f_loop.close()
 

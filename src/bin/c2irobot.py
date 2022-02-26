@@ -12,7 +12,7 @@
 
 import os, serial, time, signal, sys
 import ConfigParser, log4p
-import i2c_lcd
+#import i2c_lcd
 
 config_file = '../conf/c2irobot.conf'
 
@@ -21,7 +21,7 @@ if len(sys.argv) > 1   :
 
 config = ConfigParser.ConfigParser()
 config.read(config_file)
-
+        
 conf_dir = config.get('general', 'conf_dir')
 log_config = config.get('general', 'log_config')
 device = config.get('bras', 'device')
@@ -33,12 +33,12 @@ gcode_fin = config.get('bras', 'gcode_fin')
 logger = log4p.GetLogger(__name__, config=log_config)
 log = logger.logger
 
-lcd = i2c_lcd.lcd()
+#lcd = i2c_lcd.lcd()
 time.sleep(.1)
-lcd.lcd_clear()
+#lcd.lcd_clear()
 time.sleep(.1)
-lcd.backlight_on(True)
-lcd.lcd_display_string('   C2I  Robot'.ljust(16),int(1))
+#lcd.backlight_on(True)
+#lcd.lcd_display_string('   C2I  Robot'.ljust(16),int(1))
 
 def readConfiguration(signalNumber, frame):
     log.info('(SIGHUP) reading configuration')
@@ -48,14 +48,14 @@ def terminateProcess(signalNumber, frame):
     global ending
     ending = True
     log.info('(SIGTERM) terminating the process')
-    lcd.lcd_display_string('Arret demande'.ljust(16),int(2))
+    #lcd.lcd_display_string('Arret demande'.ljust(16),int(2))
     return
 
 def interruptProcess(signalNumber, frame):
     global ending
     ending = True
     log.info('(SIGINT) interrupt the process')
-    lcd.lcd_display_string('Arret demande'.ljust(16),int(2))
+    #lcd.lcd_display_string('Arret demande'.ljust(16),int(2))
     return
 
 def receiveSignal(signalNumber, frame):
@@ -81,10 +81,10 @@ if __name__ == '__main__':
     signal.signal(signal.SIGTERM, terminateProcess)
 
     log.info('Initialisation')
-    lcd.lcd_display_string('Initialisation'.ljust(16),int(2))
+    #lcd.lcd_display_string('Initialisation'.ljust(16),int(2))
     time.sleep(2)
     if not os.path.exists(device):
-      lcd.lcd_display_string('Brancher le bras'.ljust(16),int(2))
+      #lcd.lcd_display_string('Brancher le bras'.ljust(16),int(2))
       log.debug('Device ' + device + ' not found!')
       log.error("Arm is not connected to USB port!")
       time.sleep(2)
@@ -99,7 +99,7 @@ if __name__ == '__main__':
     s.flushInput()  # Flush startup text in serial input
 
     log.info('Mise en position')
-    lcd.lcd_display_string('Mise en position'.ljust(16),int(2))
+    #lcd.lcd_display_string('Mise en position'.ljust(16),int(2))
 
     grbl_out = 'n/a'
 
@@ -117,7 +117,7 @@ if __name__ == '__main__':
     f_init.close()
 
     log.info('Debut du cycle')
-    lcd.lcd_display_string('Execution ...'.ljust(16),int(2))
+    #lcd.lcd_display_string('Execution ...'.ljust(16),int(2))
 
     ending = False
     # Start loop
@@ -146,7 +146,7 @@ if __name__ == '__main__':
             break
 
     log.info('Fin du cycle')
-    lcd.lcd_display_string('Fin du cycle'.ljust(16),int(2))
+    #lcd.lcd_display_string('Fin du cycle'.ljust(16),int(2))
 
     log.info('Retour en position initiale')
     # Open g-code files
@@ -169,10 +169,10 @@ if __name__ == '__main__':
     s.close()
 
     # Turn off LCD screen
-    lcd.lcd_display_string('Fin de session'.ljust(16),int(2))
+    #lcd.lcd_display_string('Fin de session'.ljust(16),int(2))
     time.sleep(3)
-    lcd.lcd_clear()
+    #lcd.lcd_clear()
     time.sleep(.1)
-    lcd.backlight_on(False)
+    #lcd.backlight_on(False)
 
     log.info('Fin de session')

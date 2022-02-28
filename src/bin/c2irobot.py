@@ -171,6 +171,7 @@ if __name__ == '__main__':
     dist_capteur_depart = 0
     dist_capteur_fin = 0
     rotation_coord = 0
+    rotation_sens = '+'
 
     try:
         while True:
@@ -181,16 +182,32 @@ if __name__ == '__main__':
             # print ("Mesure capteur fin = %.1f cm" % dist_capteur_fin)
             time.sleep(1)
             
-            # Si la distance mesuree par le capteur est inerieure a 10cm, on monte la pince
-            if dist_capteur_depart < 10:
+            # Si la distance mesuree par le capteur de depart est inerieure a 10cm : on monte la pince
+            if dist_capteur_depart < 10 and rotation_sens == "+":
                arduino_serial.write('X-2.5 Y0.5\n') 
+               #rotation_sens = '+'
             
+            # Si la distance mesuree par le capteur de depart est inerieure a 10cm : on descend la pince et on la ferme
+            if dist_capteur_depart < 10 and rotation_sens == "-":
+               arduino_serial.write('X0 Y0\n')
+               time.sleep(1)
+               arduino_serial.write('M3S50\n')
+               rotation_sens = '+'
+
+            # Si la distance mesuree par le capteur de depart est superieure a 10 cm : on tourne
+            # if dist_capteur_depart > 10 and dist_capteur_fin > 20 :
             if dist_capteur_depart > 10:
                rotation_coord = rotation_coord + 0.1
                # print (rotation_coord)
-               # print ('Z+%.1f' % rotation_coord)
-               arduino_serial.write('Z+%.1f \n' % rotation_coord)
+               # print ('Z' + rotation_sens '%.1f' % rotation_coord)
+               arduino_serial.write('Z%s%.1f \n' % (rotation_sens, rotation_coord))
 
+             # Si la distance mesuree par le capteur de fin est inferieure a 20 cm : onfait une pause, on ouvre la pince et on inverse le sens de rotation
+             if dist_capteur_fin < 20:
+                time.sleep(1)
+                arduino_serial.write('M3S0\n')
+                time.sleep(1)
+                rotation_sens = '-'
 
     # Reset by pressing CTRL + C
     except KeyboardInterrupt:

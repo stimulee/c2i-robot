@@ -31,12 +31,24 @@ conf_dir = config.get('general', 'conf_dir')
 log_config = config.get('general', 'log_config')
 device = config.get('bras', 'device')
 bauds = config.get('bras', 'bauds')
-gcode_debut = config.get('bras', 'gcode_debut')
-gcode_boucle = config.get('bras', 'gcode_boucle')
-gcode_fin = config.get('bras', 'gcode_fin')
 
 logger = log4p.GetLogger(__name__, config=log_config)
 log = logger.logger
+
+#GPIO Mode (BOARD / BCM)
+GPIO.setmode(GPIO.BCM)
+ 
+#set GPIO Pins
+GPIO_TRIGGER_1 = 18
+GPIO_ECHO_1 = 24
+GPIO_TRIGGER_2 = 17
+GPIO_ECHO_2 = 25
+
+#set GPIO direction (IN / OUT)
+GPIO.setup(GPIO_TRIGGER_1, GPIO.OUT)
+GPIO.setup(GPIO_ECHO_1, GPIO.IN)
+GPIO.setup(GPIO_TRIGGER_2, GPIO.OUT)
+GPIO.setup(GPIO_ECHO_2, GPIO.IN)
 
 def readConfiguration(signalNumber, frame):
     log.info('(SIGHUP) reading configuration')
@@ -60,34 +72,23 @@ def receiveSignal(signalNumber, frame):
     log.info('Received:', signalNumber)
     return
 
-#GPIO Mode (BOARD / BCM)
-GPIO.setmode(GPIO.BCM)
- 
-#set GPIO Pins
-GPIO_TRIGGER = 18
-GPIO_ECHO = 24
- 
-#set GPIO direction (IN / OUT)
-GPIO.setup(GPIO_TRIGGER, GPIO.OUT)
-GPIO.setup(GPIO_ECHO, GPIO.IN)
- 
-def distance():
+def mesure_capteur_depart():
     # set Trigger to HIGH
-    GPIO.output(GPIO_TRIGGER, True)
+    GPIO.output(GPIO_TRIGGER_1, True)
  
     # set Trigger after 0.01ms to LOW
     time.sleep(0.00001)
-    GPIO.output(GPIO_TRIGGER, False)
+    GPIO.output(GPIO_TRIGGER_1, False)
  
     StartTime = time.time()
     StopTime = time.time()
  
     # save StartTime
-    while GPIO.input(GPIO_ECHO) == 0:
+    while GPIO.input(GPIO_ECHO_1) == 0:
         StartTime = time.time()
  
     # save time of arrival
-    while GPIO.input(GPIO_ECHO) == 1:
+    while GPIO.input(GPIO_ECHO_1) == 1:
         StopTime = time.time()
  
     # time difference between start and arrival
@@ -97,7 +98,35 @@ def distance():
     distance = (TimeElapsed * 34300) / 2
  
     return distance
-     
+
+def mesure_capteur_fin():
+    # set Trigger to HIGH
+    GPIO.output(GPIO_TRIGGER_2, True)
+ 
+    # set Trigger after 0.01ms to LOW
+    time.sleep(0.00001)
+    GPIO.output(GPIO_TRIGGER_2, False)
+ 
+    StartTime = time.time()
+    StopTime = time.time()
+ 
+    # save StartTime
+    while GPIO.input(GPIO_ECHO_2) == 0:
+        StartTime = time.time()
+ 
+    # save time of arrival
+    while GPIO.input(GPIO_ECHO_2) == 1:
+        StopTime = time.time()
+ 
+    # time difference between start and arrival
+    TimeElapsed = StopTime - StartTime
+    # multiply with the sonic speed (34300 cm/s)
+    # and divide by 2, because there and back
+    distance = (TimeElapsed * 34300) / 2
+ 
+    return distance
+
+
 if __name__ == '__main__':
     # register the signals to be caught
     signal.signal(signal.SIGHUP, readConfiguration)
@@ -119,48 +148,52 @@ if __name__ == '__main__':
     log.info('Initialisation')
     
     time.sleep(1)
+
     if not os.path.exists(device):
-      #lcd.lcd_display_string('Brancher le bras'.ljust(16),int(2))
-      log.debug('Device ' + device + ' not found!')
-      log.error("Arm is not connected to USB port!")
-      time.sleep(2)
-      sys.exit()
+       # lcd.lcd_display_string('Brancher le bras'.ljust(16),int(2))
+       log.debug('Device ' + device + ' not found!')
+       log.error("Arm is not connected to USB port!")
+       time.sleep(2)
+       sys.exit()
 
     # Open grbl serial port
-    s = serial.Serial(device, bauds)
+    arduino_serial = serial.Serial(device, bauds)
     
-        # Wake up grbl
-    s.write("\r\n\r\n")
+    # Wake up grbl
+    arduino_serial.write("\r\n\r\n")
     time.sleep(2)   # Wait for grbl to initialize
-    s.flushInput()  # Flush startup text in serial input
+    arduino_serial.flushInput()  # Flush startup text in serial input
 
     log.info('Mise en position')
     #lcd.lcd_display_string('Mise en position'.ljust(16),int(2))
 
     grbl_out = 'n/a'
-    
-    
+    dist_capteur_depart = 0
+    dist_capteur_fin = 0
+    rotation_coord = 0
+
     try:
         while True:
-            dist = distance()
-            print ("Measured Distance = %.1f cm" % dist)
-            print (dist)
+            dist_capteur_depart = mesure_capteur_depart()
+            print ("Mesure capteur depart = %.1f cm" % dist_capteur_depart)
+
+            # dist_capteur_fin = mesure_capteur_fin()
+            # print ("Mesure capteur fin = %.1f cm" % dist_capteur_fin)
             time.sleep(1)
             
-            if dist < 10:
-			   # montee de la pince
-               s.write('X-2.5 Y0.5\n') 
+            # Si la distance mesuree par le capteur est inerieure a 10cm, on monte la pince
+            if dist_capteur_depart < 10:
+               arduino_serial.write('X-2.5 Y0.5\n') 
             
-            coord = 0
-            while dist > 10:
-				coord = coord + 0.1
-				print (coord)
-				print ('Z+%.1f' % coord)
-				s.write('Z+%.1f \n' % coord)
- 
-            
-        # Reset by pressing CTRL + C
+            if dist_capteur_depart > 10:
+               rotation_coord = rotation_coord + 0.1
+               # print (rotation_coord)
+               # print ('Z+%.1f' % rotation_coord)
+               arduino_serial.write('Z+%.1f \n' % rotation_coord)
+
+
+    # Reset by pressing CTRL + C
     except KeyboardInterrupt:
-        print("Measurement stopped by User")
+        print("Stopped by User")
         GPIO.cleanup()
  
